@@ -1,0 +1,55 @@
+---
+title: "1 & 2 (continued)"
+output: pdf_document
+---
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(ggrepel)
+library(ggplot2)
+library(dplyr)
+library(Hmisc)
+library(readxl)
+library(DBI)
+library(odbc)
+library(readr)
+library(writexl)
+library(knitr)
+library(clipr)
+```
+
+## R scripts & results for previous questions
+
+## 1) a)
+```{r echo=TRUE, warning=FALSE}
+#read data
+hw2_data <- read.csv("/Users/giangvu/Desktop/STAT 2131 - Applied Stat Methods 1/HW/hw2/hw2_data.csv",
+                     header = T,sep = ",")
+
+#fit regression
+hw2_model <- lm(Y ~ X, data = hw2_data)
+sm <- summary(hw2_model)
+sm
+
+#plot
+plot(Y ~ X, data = hw2_data)
+abline(hw2_model)
+```
+
+## 2) calculating MSE and s^2{Yh}
+```{r echo=TRUE, warning=FALSE}
+#MSE
+mse <- function(sm){ 
+  sum(sm$residuals^2)/(nrow(hw2_data)-2)
+}
+mse_hw2 <- mse(sm)
+mse_hw2
+
+#s^2{Yh}
+xbar <- mean(hw2_data$X) #mean of Xi's - X bar
+xbar
+hw2_data$sq_diff_fr_mean <- (hw2_data$X - xbar)**2 
+xsum_sqr <- sum(hw2_data$sq_diff_fr_mean) #sum of (Xi - Xbar)^2 for i = 1,...,n
+xsum_sqr
+#with a new point Xh = 30, we calculate the s^2{Y} as follows
+s2Yh <- mse_hw2*(1/nrow(hw2_data) + (30 - xbar)**2/(xsum_sqr))
+s2Yh
+```
