@@ -1,0 +1,154 @@
+---
+title: "HW8"
+author: "Giang Vu"
+date: "11/3/2020"
+output: pdf_document
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(ggrepel)
+library(ggplot2)
+library(dplyr)
+library(Hmisc)
+library(readxl)
+library(DBI)
+library(odbc)
+library(readr)
+library(writexl)
+library(knitr)
+library(clipr)
+library(car)
+library(MASS)
+library(np)
+```
+
+## Problem 2    
+  
+  # a   
+   
+```{r echo=TRUE, warning=FALSE}
+#read data
+hw8_dt <- read.delim("/Users/giangvu/Desktop/STAT 2131 - Applied Stat Methods 1/HW/hw8/Gambling.txt")
+```
+  We can see evidence that the mean model or constant variance assumption is violated? From the histogram of the residuals and the QQ plot we can see that the errors are not normally distributed    
+  
+```{r echo = TRUE, warning=TRUE}
+mod2a <- lm(gamble ~.,data = hw8_dt)
+sum2a <- summary(mod2a)
+plot(predict(mod2a), resid(mod2a),
+     ylab  = "Residuals", xlab = "Predicted Values", main ="Residual Plot 1")
+abline(0,0)
+
+plot(hw8_dt$sex, resid(mod2a),
+     ylab  = "Residuals", xlab = "Sex", main ="Residual Plot 2")
+abline(0,0)
+
+plot(hw8_dt$status, resid(mod2a),
+     ylab  = "Residuals", xlab = "Status", main ="Residual Plot 3")
+abline(0,0)
+
+plot(hw8_dt$income, resid(mod2a),
+     ylab  = "Residuals", xlab = "Income", main ="Residual Plot 4")
+abline(0,0)
+
+plot(hw8_dt$verbal, resid(mod2a),
+     ylab  = "Residuals", xlab = "Verbal", main ="Residual Plot 5")
+abline(0,0)
+
+qqnorm(rstandard(mod2a), 
+       ylab="Standardized Residuals", 
+       xlab="Normal Scores") 
+qqline(rstandard(mod2a))
+
+hist(resid(mod2a))
+```
+   # b   
+   With boxcox and lambda chosen as 0.2, the new model seems to satisfy assumptions       
+```{r echo=TRUE, warning=FALSE}
+#add small amount to gamble to make box cox work
+hw8_dt$Y <- hw8_dt$gamble + 10**(-8)
+bxcx2b <- boxcox(lm(Y~sex+status+income+verbal,data = hw8_dt[,-5]),plotit = T)
+#looks like lambda  = 0.2
+lambda <- 0.2
+hw8_dt$Y_tilde <- (hw8_dt$Y^lambda - 1)/lambda
+mod2b <- lm(Y_tilde~.,data = hw8_dt[,-c(5,6)])
+sm2b <- summary(mod2b) 
+
+plot(predict(mod2b), resid(mod2b),
+     ylab  = "Residuals", xlab = "Predicted Values", main ="Residual Plot 1 BoxCox")
+abline(0,0)
+
+plot(hw8_dt$sex, resid(mod2b),
+     ylab  = "Residuals", xlab = "Sex", main ="Residual Plot 2 BoxCox")
+abline(0,0)
+
+plot(hw8_dt$status, resid(mod2b),
+     ylab  = "Residuals", xlab = "Status", main ="Residual Plot 3 BoxCox")
+abline(0,0)
+
+plot(hw8_dt$income, resid(mod2b),
+     ylab  = "Residuals", xlab = "Income", main ="Residual Plot 4 BoxCox")
+abline(0,0)
+
+plot(hw8_dt$verbal, resid(mod2b),
+     ylab  = "Residuals", xlab = "Verbal", main ="Residual Plot 5 BoxCox")
+abline(0,0)
+
+qqnorm(rstandard(mod2b), 
+       ylab="Standardized Residuals", 
+       xlab="Normal Scores") 
+qqline(rstandard(mod2b))
+
+hist(resid(mod2b))
+hist(hw8_dt$Y_tilde)
+```
+  
+   # c   
+   The leverage points are plotted below. There some unusually large leverage points here and they correspond to the 33th and 42nd observations. After refitting the model without those points, we can see that the coefficients and standard error don't seem to be affected too much.         
+```{r echo=TRUE, warning=FALSE}
+hw8_x <-as.matrix(hw8_dt[,-c(5,6,7)])
+H8c <- hw8_x %*% solve(t(hw8_x)%*%hw8_x) %*% t(hw8_x)
+hist(diag(H8c))
+which(diag(H8c)>(2*4/47))
+#there are some abnormally large leverage points here
+#those points correspond to 33th, 42th observations
+#now refit model in b without those points
+mod2c <- lm(Y_tilde~.,data = hw8_dt[-c(33,42),-c(5,6)])
+#coefficients don't change much
+sm2c <- summary(mod2c)
+#std error dont seem to change too much either
+sm2c
+```   
+   # d   
+   For model in a, the influential points seem to be observations 39th and 24th. For the model in b, influential point is observation 20th.          
+```{r echo=TRUE, warning=FALSE}
+cooks.distance(mod2a)
+plot(cooks.distance(mod2a))
+which(cooks.distance(mod2a)>(4/(41-4)))
+cooks.distance(mod2b)
+plot(cooks.distance(mod2b))
+which(cooks.distance(mod2b)>(4/(41-4)))
+
+#24th, 39th obs for model a
+#20th ob for model b
+```   
+    
+## Problem 3    
+  
+  # c   
+   
+```{r echo=TRUE, warning=FALSE}
+#read data
+dat3c <- read.csv("/Users/giangvu/Desktop/STAT 2131 - Applied Stat Methods 1/HW/hw8/water.csv",sep = ",")
+plot(dat3c$yr,dat3c$freq,main = 'Frequency of the word \'water\' in printed sources over time',
+     xlab = 'Year',ylab = 'Frequency')
+#using package np
+kern.3c <- npreg(freq~yr,data = dat3c) #h = 2.016924 for gaussian
+ksm1 <- ksmooth(x=dat3c$yr,y=dat3c$freq,kernel = 'normal',bandwidth = kern.3c$bw)
+lines(ksm1$x,ksm1$y,col="red")
+#using base R
+kern.3c1 <- density(x=dat3c$yr,kernel = "gaussian") #h = 19.48 for gaussian
+ksm2 <- ksmooth(x=dat3c$yr,y=dat3c$freq,kernel = 'normal',bandwidth = kern.3c1$bw)
+lines(ksm2$x,ksm2$y,col="green")
+```
+  I find bandwidth h using two different fucntions npreg() and density() and obtain different results. npreg() gave me a smaller bandwidth so the result is less smooth, while I got larger bandwidth and thus a smoother line with density(). I also tried doing the same steps for different types of kernel (Epanechnikov and cosine) but the bandwidths I got from both functions are similar regardless of kernel type.   
