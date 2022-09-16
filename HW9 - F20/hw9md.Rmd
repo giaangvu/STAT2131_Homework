@@ -1,0 +1,130 @@
+---
+title: "HW9"
+author: "Giang Vu"
+date: "11/8/2020"
+output: pdf_document
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(ggrepel)
+library(ggplot2)
+library(dplyr)
+library(Hmisc)
+library(readxl)
+library(DBI)
+library(odbc)
+library(readr)
+library(writexl)
+library(knitr)
+library(clipr)
+library(car)
+library(MASS)
+library(np)
+library(olsrr)
+```
+
+## Problem 1        
+   **Forward & backward selection**    
+   With both forward selection & alpha = 0.1 and backward selection & alpha = 0.2, only temp and fat are included in the model.    
+```{r echo=TRUE, warning=FALSE}
+#read data
+dat91 <- read.delim("/Users/giangvu/Desktop/STAT 2131 - Applied Stat Methods 1/HW/hw9/steam_text-2.txt")
+fit91 <- lm(steam~fat+glycerine+wind+frezday+temp,data = dat91)
+
+#Foward selection with alpha = 0.1
+alpha.1 <- 0.1
+forward91 <- olsrr::ols_step_forward_p(fit91, penter = alpha.1)
+forward91$predictors #temp & fat included
+
+#Backward selection with alpha = 0.2
+alpha.2 <- 0.2
+backward91 <- olsrr::ols_step_backward_p(fit91, penter = alpha.2)
+backward91$removed #temp & fat not removed
+```
+   **Best subset using AIC and BIC**     
+   With both best subset regression using AIC and best subset using BIC, again, only temp and fat are included in the model.    
+```{r echo=TRUE, warning=FALSE}
+#best subset with AIC
+best.subset91 <- olsrr::ols_step_best_subset(fit91)
+which.min(best.subset91$aic) #model with only fat and temp selected
+
+#best subset with BIC
+AIC <- best.subset91$aic
+our.BIC <- AIC - 2*(1:11) + log(nrow(dat91))*(1:11)
+#How does this compare to their BIC#
+best.subset91$sbc - our.BIC   
+which.min(our.BIC)
+which.min(best.subset91$sbc)
+```
+    
+## Problem 4    
+  
+  **(a)**      
+  Simple linear model  
+```{r echo=TRUE, warning=FALSE}
+#read data
+dat94 <- read.delim("/Users/giangvu/Desktop/STAT 2131 - Applied Stat Methods 1/HW/hw9/Fat.txt")
+
+#divide into test & train sets
+test94 <- dat94[seq(0, nrow(dat94), 10), ]
+train94 <- anti_join(dat94,test94)
+
+#simple linear
+fit94 <- lm(siri~.,data = train94)
+fit94
+sum94a <- summary(fit94)
+```
+  
+  **(b)**      
+  Ridge regression results are given below, I did this with a range of lambda from 0 to 0.1, incrementing by 0.0001. The value of lambda that minimizes the generalized cross validation value is 0.0339, which can also be seen in the plot.  
+```{r echo=TRUE, warning=FALSE}
+#ridge with training set
+fit.ridge94 <- lm.ridge(siri~., data=train94, lambda = seq(0, 0.1, 0.0001))
+summary(fit.ridge94)
+res94b <- data.frame(fit.ridge94$GCV)
+colnames(res94b) <- "GCV"
+res94b$lambda <- as.numeric(rownames(res94b))
+res94b[which.min(res94b$GCV),]$lambda #lambda pf 0.0339 is the one that minimizes the GCV value
+coef(fit.ridge94)[which.min(res94b$GCV),] #coefficient estimates for model with lambda = 0.0339
+plot(x=res94b$lambda,y=res94b$GCV,xlab="Lambda",ylab="Generalized cross validation value",lwd=0.3)
+```
+  
+  **(c)**       
+  The training error (MSE) of simple linear model in (a) and ridge regression model with lambda = 0.0339 in (b) are calculated below. We can see that the training error for model in (a) is smaller than that of model in (b). As already proven in question 2(b), for most linear models, training error tends to underestimate the prediction error, so it is a poor judge of how well the model will predictt future data.    
+```{r echo=TRUE, warning=FALSE}
+#training error (MSE) for linear model
+mse94a <- mean(sum94a$residuals^2) 
+mse94a #1.979365
+
+#training error (MSE) for ridge model
+coef94b <- coef(fit.ridge94)[which.min(res94b$GCV),] #coefficient estimates for model with lambda = 0.0339
+Xtrain <- model.matrix(siri~.,data=train94) #design matrix from training set
+Yhat94b <- Xtrain%*%coef94b #fitted values for ridge model with lambda = 0.0339
+mse94b <- mean((train94$siri-Yhat94b)^2)
+mse94b #1.979579
+
+#training error for model in a is smaller than training model for model in b
+mse94a < mse94b
+```
+  
+  **(d)**      
+  For this part, I used squared loss as prediction error (test error), and found that the test error for model in (a) is higher than the test error for the model with ridge in (b), which is consistent with answer in part (c) where we discussed how the training error underestimates the test error. In this case, training error for model of (a) is smaller, but its test error is in fact larger than model in (b). So using training error to judge performance, model in (a) performs better, but using test error, we will have model in (b) performing better.    
+```{r echo=TRUE, warning=FALSE}
+#test error for linear model
+pred94a<-predict(fit94,newdata=test94[,-1],se=T)
+testerr94a <- mean((test94$siri - pred94a$fit) ^ 2) #1.280357
+testerr94a
+
+#test error for ridge model
+Xtest <- model.matrix(siri~.,data=test94) #design matrix from test set
+Yhat94b_test <- Xtest%*%coef94b #fitted values for ridge model with lambda = 0.0339 with test dataset
+testerr94b <- mean((test94$siri-Yhat94b_test)^2) #1.272584
+testerr94b
+
+#test error for model in a (OLS) is greater than test error for model in b (ridge)
+testerr94a < testerr94b
+```
+
+
+
+
