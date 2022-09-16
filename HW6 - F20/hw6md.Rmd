@@ -1,0 +1,85 @@
+---
+title: "hw6"
+author: "Giang Vu"
+date: "10/1/2020"
+output: pdf_document
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(ggrepel)
+library(ggplot2)
+library(dplyr)
+library(Hmisc)
+library(readxl)
+library(DBI)
+library(odbc)
+library(readr)
+library(writexl)
+library(knitr)
+library(clipr)
+library(car)
+```
+
+# HOMEWORK 6
+
+## 4) 
+__a)__
+```{r echo=TRUE, warning=FALSE}
+#read data
+hw6_dt <- read.delim("/Users/giangvu/Desktop/STAT 2131 - Applied Stat Methods 1/HW/hw6/steam_text-1.txt")
+#regress steam (Y) onto fat (X1) and glycerine (X2)
+hw6_md <- lm(steam ~ fat + glycerine, data = hw6_dt)
+#i)
+hw6_sm<-summary(hw6_md) #mean model
+hw6_anova <- summary(aov(hw6_md)) #variance model
+hw6_sm
+hw6_anova
+```
+Interpreting the coefficients:
+As the value for variable fat increases by 1 unit, the value for steam is expected to increase by 1.728 units. As the value for variable glycerin increases by 1 unit, the value for steam is expected to decreease by -6.628 units.
+However, the coefficients estimates for both variables fat and glycerin in this model are not statistically significant given alpha = 0.05
+
+
+```{r echo=TRUE, warning=FALSE}
+#ii) plot residual as fcn of Y^, fat, glycerine
+plot(predict(hw6_md), resid(hw6_md),
+     ylab  = "Residuals", xlab = "Predicted Values", main ="Residual Plot 1")
+abline(0,0)
+
+plot(hw6_dt$fat, resid(hw6_md),
+     ylab  = "Residuals", xlab = "Fat", main ="Residual Plot 2")
+abline(0,0)
+
+plot(hw6_dt$glycerine, resid(hw6_md),
+     ylab  = "Residuals", xlab = "Glycerin", main ="Residual Plot 3")
+abline(0,0)
+```
+Looking at the 3 plots, I don't see any relationship between residuals and glycerin, fat, or predicted Y.
+
+```{r echo=TRUE, warning=FALSE}
+#iii) 
+linearHypothesis(hw6_md,c("fat=0","glycerine=0")) #F-test
+```
+p-value for F test is 0.1197 > 0.05 => fail to reject H0, also I noticed that R square of this model is really small too (0.1755)
+We can conclude that the two variables fat and glycerin cannot fully explain the variability of Y (steam). Their coefficients are not statistically significant.
+
+```{r echo=TRUE, warning=FALSE}
+#iv) temp against residual 
+plot(hw6_dt$temp, resid(hw6_md),
+     ylab  = "Residuals", xlab = "Temp", main ="Residual Plot 4")
+abline(0,0)
+```
+There's a decreasing pattern, so we can say that residuals can be explained by temp. This is probably what makes our original model a poor model.
+
+__b)__
+```{r echo=TRUE, warning=FALSE}
+#i) regress steam (Y) onto fat (X1), glycerine (X2) and temp (X3)
+hw6_md2 <- lm(steam ~ fat + glycerine + temp, data = hw6_dt)
+summary(hw6_md2)
+linearHypothesis(hw6_md2,c("fat=0","glycerine=0"))
+```
+p value for F test = 0.0005569 < 0.05 => reject H0
+We can say that fat and glycerine do have some impact on steam now that temp is included in the model.
+However, with a new variable temp added into the model and alpha = 0.05, the coefficient estimates for fat and glycerine are sill not statistically significant (based on lm() results), but the coefficient estimate for temp is statistically significant. 
+
+ii) Because of the inclusion of variable X3 (temp). Our original model is underfitting because we leave outt an important variable - temp, so we saw that a lot of residuals are now accounted for by temp. With temp included, we have a better model, higher R squared. 
