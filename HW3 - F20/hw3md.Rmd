@@ -1,0 +1,98 @@
+---
+title: "hw3"
+output: pdf_document
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(ggrepel)
+library(ggplot2)
+library(dplyr)
+library(Hmisc)
+library(readxl)
+library(DBI)
+library(odbc)
+library(readr)
+library(writexl)
+library(knitr)
+library(clipr)
+```
+
+# HOMEWORK 3
+
+## 1) a)
+```{r echo=TRUE, warning=FALSE}
+#read data
+hw2_data <- read.csv("/Users/giangvu/Desktop/STAT 2131 - Applied Stat Methods 1/HW/hw2/hw2_data.csv",
+                     header = T,sep = ",")
+
+#linear regression model
+hw2_model <- lm(Y ~ X, data = hw2_data)
+
+#SSE - RESIDUAL SUM OF SQUARES (or SSE(R))
+ssr = sum((fitted(hw2_model) - hw2_data$Y)**2)
+ssr
+
+#SSPE or SSE(F)
+hw2_data <- hw2_data %>% mutate(level=as.numeric(factor(X)))
+hw2_data <- hw2_data %>% group_by(level) %>% mutate(lvl_mean=mean(Y))
+hw2_data <- hw2_data %>% mutate(lvl_err_sqr=(Y-lvl_mean)**2) 
+sspe <- sum(hw2_data$lvl_err_sqr)
+sspe
+
+#SSLF = SSE - SSPE
+sslf <- ssr - sspe
+sslf
+```
+
+## 2) 
+__a)__
+```{r echo=TRUE, warning=FALSE}
+#read data
+hw3_data <- read.csv("/Users/giangvu/Desktop/STAT 2131 - Applied Stat Methods 1/HW/hw3/hw3_data.csv",
+                     header = T,sep = ",")
+#scatter plot
+plot(Y ~ X, data = hw3_data)
+```
+From the scatter plot generated above, there doesn't seem to be a linear relationship between our original X and Y. If we try to fit a line through the points, the line would be a non-linear curve. Therefore, some transformation of our variables would be necessary before we want to run a linear regression with the data.
+
+__b)__
+```{r echo=TRUE, warning=FALSE}
+#add a column for transformed X, call it X2
+hw3_data <- hw3_data %>% mutate(X2 = sqrt(X))
+#linear regression of Y on X2
+hw3_model <- lm(Y ~ X2, data = hw3_data)
+sm3 <- summary(hw3_model)
+sm3
+anova(hw3_model)
+```
+The estimated linear regression function for the transformed data is  
+  $$\hat{Y} = 1.2547 + 3.6235X^{'}$$
+  
+__c)__
+```{r echo=TRUE, warning=FALSE}
+#scatter plot
+plot(Y ~ X2, data = hw3_data)
+#regression line
+abline(hw3_model)
+```
+The regression line does appear to be a good fit to the transformed data.  
+  
+__d)__
+```{r echo=TRUE, warning=FALSE}
+#Plot residuals against fitted values
+plot(hw3_data$X2, resid(hw3_model),
+     ylab  = "Residuals", xlab = "Square Root of Lot Size", main ="Residual Plot")
+abline(0,0)
+
+#Normal probability plot
+qqnorm(rstandard(hw3_model), 
+       ylab="Standardized Residuals", 
+       xlab="Normal Scores") 
+qqline(rstandard(hw3_model))
+```
+From the residual plot, we can conclude that there are no clear correlation between the residuals and the transformed Xi's. Therefore, the regression with transformed X satisfies the assumption that all the residuals are independent of the Xi's.  
+  From the normal probability plot, we can see that the points are close to the q-q line, that means that our sample (observed) quantiles are close to the theoretical normal quantiles. We can then conclude that the residuals from our regression are normally distributed, which satisfies another linear model assumption.  
+  
+__e)__
+The estimated regression function in the original units is  
+  $$\hat{Y} = 1.2547 + 3.6235\sqrt{X}$$
