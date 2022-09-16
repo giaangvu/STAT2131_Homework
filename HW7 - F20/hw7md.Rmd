@@ -1,0 +1,127 @@
+---
+title: "HW7"
+author: "Giang Vu"
+date: "10/6/2020"
+output: pdf_document
+---
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(ggrepel)
+library(ggplot2)
+library(dplyr)
+library(Hmisc)
+library(readxl)
+library(DBI)
+library(odbc)
+library(readr)
+library(writexl)
+library(knitr)
+library(clipr)
+library(car)
+```
+
+## Problem 3 (6.10 & 7.4)
+  
+  # 6.10 - a
+
+```{r echo=TRUE, warning=FALSE}
+#read data
+hw7 <- read.csv("/Users/giangvu/Desktop/STAT 2131 - Applied Stat Methods 1/HW/hw7/hw7.3data.csv",sep = ",")
+mod73 <- lm(Y ~ X1 + X2 + X3, data = hw7)
+sum73 <- summary(mod73)
+sum73
+```
+The estimated regression function is  
+  $$\hat{Y} = 4150 + 0.0007871X_{1} - 13.17X_{2} + 623.6X_{3}$$  
+  Interpretation of coefficients:  
+  When number of cases shipped increases by 1 case, the total labor hours is expected to increase by 0.0007871 hour.  
+  When indirect costs of total labor hours increases by 1 percentage point, the total labor hours is expected to decrease by 13.17 hours.   
+  When the week has a holiday, the total labor hours is expected to increase by 623.6 hours, and there's no change expected with total labor hours when the week has no holiday.
+  
+  # 6.10 - c
+```{r echo = TRUE, warning=TRUE}
+#residuals against Yh
+plot(predict(mod73), resid(mod73),
+     ylab  = "Residuals", xlab = "Predicted Values", main ="Residuals against Yh")
+abline(0,0)
+
+#residuals against X1
+plot(hw7$X1, resid(mod73),
+     ylab  = "Residuals", xlab = "X1", main ="Residuals against X1")
+abline(0,0)
+
+#residuals against X2
+plot(hw7$X2, resid(mod73),
+     ylab  = "Residuals", xlab = "X2", main ="Residuals against X2")
+abline(0,0)
+
+#Residuals against X3
+plot(hw7$X3, resid(mod73),
+     ylab  = "Residuals", xlab = "X3", main ="Residuals against X3")
+abline(0,0)
+
+#Residuals against X1*X2
+plot(hw7$X1*hw7$X2, resid(mod73),
+     ylab  = "Residuals", xlab = "X1*X2", main ="Residuals against X1*X2")
+abline(0,0)
+
+#normal prob plot
+qqnorm(rstandard(mod73), 
+       ylab="Standardized Residuals", 
+       xlab="Normal Scores") 
+qqline(rstandard(mod73))
+```
+  
+  From the residual plots, we can see that there are no relationships between the residuals and X1, X2, and X1*X2. There's some pattern between residuals and predicted values of Y, and between residuals and X3 as well.
+  From the normal probability plot, we can see that the residuals have a relatively normal distribution.  
+    
+  # 7.4 - b
+```{r echo=T,warning=F}
+linearHypothesis(mod73,c("X2=0"))
+```
+  We test the following hypotheses
+  $$H_0: \beta_2 = 0 $$  
+  $$H_a: \beta_2 \neq0$$  
+  $$SSR(X_2|X_1,X_3)=6674.6$$  
+  $$SSE(X_1,X_2,X_3)=985530$$  
+  $$F^*=\frac{6674.6/(2-1)}{985530/(52-4)}=0.325 < F(0.95,1,48) = 4.04$$  
+  If F* is smaller than or equal to F(0.95,1,48), we fail to reject H0, otherwise we reject  H0.  
+  In this situation, we fail to reject H0 and conclude that we can drop X2 from our regression.  
+  From the test, we get p-value = 0.5712, which is greater than alpha = 0.05.  
+  
+## Problem 4 (6.16)  
+
+  #6.16 - a  
+```{r echo=T,warning=F}
+#read data
+hw7.4 <- read.csv("/Users/giangvu/Desktop/STAT 2131 - Applied Stat Methods 1/HW/hw7/hw7.4data.csv",sep=",")
+#fit model
+mod74 <- lm(Y ~ X1 + X2 + X3, data = hw7.4)
+sum74 <- summary(mod74)
+sum74
+#hypothesis testing
+linearHypothesis(mod74,c("X1=0","X2=0","X3=0"))
+```
+  We test the following hypotheses
+  $$H_0: \beta_1= \beta_2 =\beta_3= 0 $$  
+  $$H_a: not\: all\: beta's\: =0$$  
+  $$SSR=9120.5$$  
+  $$SSE=4248.8$$  
+  $$F^*=\frac{9120.5/(4-1)}{4248.8/(46-4)}=30.05 > F(0.9,3,42) = 2.23$$  
+  If F* is smaller than or equal to F(0.9,3,42), we fail to reject H0, otherwise we reject  H0.  
+  In this situation, we reject H0 and conclude that there is a regression relation between Y and the 3 X's.  
+  From the test, we get p-value = 1.542e-10, which is smaller than alpha = 0.1.  
+  
+  #6.16 - b  
+  The interval estimates of B1, B2, B3 using a 90% family confidence coefficient is calculated below
+```{r, echo=T, warning=F}
+confint(mod74,level=1-0.10/(2*3))
+```
+  From the result, we could see that only the interval for variable X1 (patient's age) doesn't contain 0, while X2 (illness severity) and X3 (anxiety level) do. Therefore, we could say that X1 might be the only significant predictor here.  
+    
+  #6.16 - c  
+  $$SSR=9120.5$$   
+  $$SSTO=13369.3$$  
+  The coefficient of multiple determination is 
+  $$R^2 = \frac{9120.5}{13369.3}=0.68$$   
+  This coefficient of multiple determination tells us that about 68% of the variability in patient satisfaction can be explained by patient's age, severity of illness and anxiety level together.
+
